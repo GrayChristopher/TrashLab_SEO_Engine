@@ -1,18 +1,18 @@
-
 import csv
 import os
 import subprocess
 import sys
 from jinja2 import Environment, FileSystemLoader
 
-DATA_FILE = "build2/generated_content.csv"
-TEMPLATE_DIR = "build2/templates"
-OUTPUT_DIR = "build2/output"
+DATA_FILE = "02_generated_content.csv"
+VALIDATOR_FILE = "03_validate_content.py"
+TEMPLATE_DIR = "templates"
+OUTPUT_DIR = "output"
 
 print("Running content validation...")
 
 result = subprocess.run(
-    [sys.executable, "build2/validate_content.py"]
+    [sys.executable, VALIDATOR_FILE]
 )
 
 if result.returncode != 0:
@@ -23,17 +23,25 @@ print()
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+env = Environment(
+    loader=FileSystemLoader(TEMPLATE_DIR)
+)
+
 template = env.get_template("page.html")
 
-with open(DATA_FILE, newline="", encoding="utf-8") as f:
+with open(
+    DATA_FILE,
+    newline="",
+    encoding="utf-8"
+) as f:
     markets = list(csv.DictReader(f))
 
 print("PROGRAMMATIC SEO GENERATION")
 print("-" * 40)
 
-for market in markets:
+generated = 0
 
+for market in markets:
     html = template.render(
         city=market["city"],
         state=market["state"],
@@ -52,8 +60,14 @@ for market in markets:
         f'{market["slug"]}.html'
     )
 
-    with open(output_path, "w", encoding="utf-8") as f:
+    with open(
+        output_path,
+        "w",
+        encoding="utf-8"
+    ) as f:
         f.write(html)
+
+    generated += 1
 
     print(
         f'✓ {market["city"]}, {market["state"]} '
@@ -61,4 +75,7 @@ for market in markets:
     )
 
 print("-" * 40)
-print(f"GENERATION COMPLETE: {len(markets)}/{len(markets)} pages generated")
+print(
+    f"GENERATION COMPLETE: "
+    f"{generated}/{len(markets)} pages generated"
+)
