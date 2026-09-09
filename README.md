@@ -1,153 +1,112 @@
 # TrashLab Programmatic SEO Engine
 
-A working programmatic SEO pipeline that generates 25 landing pages for a
-waste-hauler software keyword cluster from structured market data.
-
-Built for the TrashLab Director, Demand Generation take-home exercise.
+A working programmatic SEO pipeline that generates 25 landing pages for a waste-hauler software keyword cluster using structured market data, constrained content generation, deterministic validation, and a reusable HTML template.
 
 ## Overview
 
-The system separates page generation into four layers:
+The pipeline follows this architecture:
 
 ```text
 Structured Market Data
         ↓
 Constrained Content Generation
         ↓
-Content Validation
+Saved Structured Content
+        ↓
+Deterministic Validation
         ↓
 Reusable HTML Template
         ↓
 25 Generated SEO Pages
 ```
 
-The goal is to make page creation scalable without allowing the generation
-layer to invent unsupported local facts.
-
-## Keyword Cluster
-
-The sample cluster targets:
+The keyword cluster used for this prototype is:
 
 **Waste Hauler Software in [City, Texas]**
 
-Examples:
-
-- Waste Hauler Software in Austin, Texas
-- Waste Hauler Software in Houston, Texas
-- Waste Hauler Software in Dallas, Texas
-
-The dataset contains 25 Texas markets.
+The objective is to demonstrate a repeatable generation system rather than manually creating individual landing pages.
 
 ## Project Structure
 
 ```text
-TrashLab-SEO-Engine/
-├── markets.csv
-├── generated_content.csv
-├── generate_pages.py
-├── validate_content.py
-├── requirements.txt
-├── templates/
-│   └── page.html
-└── output/
-    ├── austin-tx.html
-    ├── houston-tx.html
-    ├── dallas-tx.html
-    └── ... 25 generated pages
+01_markets.csv
+02_generated_content.csv
+03_validate_content.py
+04_generate_pages.py
+page.html
+Output.zip
+requirements.txt
+README.md
 ```
 
-## 1. Structured Inputs
+### 01_markets.csv
 
-`markets.csv` contains the structured inputs used to define each page.
+Structured source data for 25 Texas markets.
 
-Core fields include:
+Fields include:
 
 - city
 - state
 - slug
 - keyword
-- primary_segment
-- secondary_segment
-- market_angle
+- primary segment
+- secondary segment
+- market angle
 
-This separates market and targeting decisions from presentation.
+### 02_generated_content.csv
 
-## 2. Content Generation
+Stores the approved content layer used to generate each page.
 
-The content layer transforms structured inputs into four page-level content fields:
+Content fields include:
 
-- hero_copy
-- operations_copy
-- local_copy
-- meta_description
+- hero copy
+- operations copy
+- local copy
+- meta description
 
-For this prototype, an LLM was used during development to help create the
-constrained content layer and the resulting approved content is persisted in
-`generated_content.csv`.
+For this prototype, an LLM was used during development to help create the constrained content layer from structured inputs. The approved outputs were then persisted in the CSV so the publishing workflow remains reproducible and does not require a live LLM call.
 
-The publishing pipeline does not require a live LLM call.
+In production, this layer could be replaced with an API-based generation step while retaining the same schema, validation, and publishing layers.
 
-In production, this layer could be replaced by an API-based generation step
-while retaining the same structured schema, validation layer, and publishing workflow.
+### 03_validate_content.py
 
-### Generation Guardrails
-
-The content-generation process prohibits:
-
-- invented statistics
-- invented customers
-- unsupported local regulations
-- unsupported market characteristics
-- claims that TrashLab has customers in a specific city
-- keyword stuffing
-
-This keeps generative flexibility separate from factual validation.
-
-## 3. Content Validation
-
-`validate_content.py` runs before pages can be generated.
+Runs deterministic QA before any pages are generated.
 
 The validator checks:
 
-- required fields are present
-- all 25 expected records exist
-- required content fields are populated
-- unsupported numeric claims are absent
-- prohibited customer and market claims are absent
+- required fields
+- expected record count
+- blank values
+- unsupported numeric claims
+- prohibited customer or market claims
 
 If validation fails, page generation stops.
 
-## 4. Page Generation
+### 04_generate_pages.py
 
-`generate_pages.py`:
+Runs the publishing pipeline.
 
-1. Runs the validation layer
-2. Loads the approved structured content
-3. Loads the reusable Jinja template
-4. Injects each market's content variables
-5. Writes one HTML page per market
+It:
 
-The same template is used across all 25 pages while structured inputs control
-the market, segment, operational angle, metadata, and page copy.
+1. Executes the validation layer.
+2. Loads the approved structured content.
+3. Loads the reusable HTML template.
+4. Injects each market's content into the template.
+5. Generates one HTML page per market.
 
-## 5. HTML Template
+### page.html
 
-`templates/page.html` contains the reusable page design.
+Reusable Jinja HTML template shared by all 25 pages.
 
-The template includes:
+The template controls page structure and presentation while the CSV controls market-specific content.
 
-- SEO title and meta description
-- market-specific hero
-- segment-specific positioning
-- operational use cases
-- local-market section
-- content accuracy guardrail
-- conversion CTA
-- responsive styling
+### Output.zip
 
-The template is intentionally lightweight and dependency-free.
+Contains the 25 generated sample HTML pages produced by the pipeline.
 
-## Running the Pipeline
+Running `04_generate_pages.py` recreates these pages in an `output/` directory.
+
+## Run the Pipeline
 
 Install dependencies:
 
@@ -155,63 +114,56 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Generate all pages:
+Run:
 
 ```bash
-python generate_pages.py
+python 04_generate_pages.py
 ```
 
-A successful run validates the content before generating the pages:
+Successful execution validates the content and generates all 25 HTML pages.
 
-```text
-CONTENT VALIDATION
-----------------------------------------
-✓ Required fields complete
-✓ Expected row count: 25
-✓ No unsupported numeric claims
-✓ No prohibited customer/market claims
-✓ 25/25 records passed validation
+## Accuracy Guardrails
 
-PROGRAMMATIC SEO GENERATION
-----------------------------------------
-...
-GENERATION COMPLETE: 25/25 pages generated
-```
+The prototype deliberately avoids unsupported local claims.
 
-Generated pages are written to `output/`.
+Generated content does not invent:
+
+- customer counts
+- market statistics
+- local regulations
+- company adoption claims
+- unsupported city-specific facts
+
+Missing market intelligence is treated as unknown rather than filled with fabricated content.
+
+This keeps the generation layer useful while separating generative flexibility from factual validation.
 
 ## Scaling the System
 
-The prototype uses 25 Texas markets, but page count is not hard-coded into the
-template architecture.
-
-Scaling means expanding the structured input layer rather than manually
-creating additional pages.
-
-For example:
+The same architecture can expand from 25 pages to hundreds or thousands of market/service combinations.
 
 ```text
-25 markets
-    ↓
-250 markets
-    ↓
-2,500 market / service combinations
+25 Texas city pages
+        ↓
+250 city + service combinations
+        ↓
+2,500+ market/service pages
 ```
 
 At larger scale I would add:
 
-- programmatic keyword research
+- keyword research and search-volume prioritization
 - authoritative geographic and market datasets
-- CMS publishing integration
-- internal-link generation
-- canonical URL management
+- automated LLM generation through an API
 - duplicate-content detection
-- generation quality scoring
-- automated SEO QA
+- content quality scoring
+- internal-link generation
+- canonical and technical SEO controls
+- CMS publishing
 - Search Console performance feedback
 - scheduled content refreshes
 
-## Production Architecture
+A production architecture could look like:
 
 ```text
 Keyword / Market Dataset
@@ -222,7 +174,7 @@ LLM Generation API
         ↓
 Deterministic Validation
         ↓
-Human Review / Quality Threshold
+Quality Threshold / Review
         ↓
 CMS Template
         ↓
@@ -231,13 +183,6 @@ Published SEO Page
 Search Performance Feedback
 ```
 
-The key design principle is that the LLM is a generation component, not the
-source of truth.
-
-Structured data and deterministic validation remain responsible for factual
-constraints and publishing safety.
-
 ## Design Principle
 
-**Use AI where generative flexibility is valuable. Use deterministic systems
-where reproducibility and factual accuracy matter.**
+**Use AI where generative flexibility is valuable. Use deterministic systems where reproducibility and factual accuracy matter.**
